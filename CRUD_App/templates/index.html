@@ -1,0 +1,12 @@
+<html>
+    <head>
+        <title>Todo App</title>
+    </head>
+    <body>
+        <ul>
+            {% for info in data %}
+            <li>{{ info.description }}</li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>
