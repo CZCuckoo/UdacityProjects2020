@@ -8,8 +8,7 @@
             }
             ul {
                 list-style: none;
-                padding: 0;
-                margin: 0;
+                padding-left: 0;
                 width: 200px;
             }
             li {
@@ -24,43 +23,61 @@
                 cursor: pointer;
                 font-size: 20px;
             }
+            .lists-wrapper, .todos-wrapper {
+                display: inline-block;
+                vertical-align: top;
+            }
         </style>
     </head>
     <body>
-        <form id="form" method="post" action="/todos/create">
-            <input type="text" id="description" name="description" />
-            <input type="submit" value="Create" />
-        </form>
-        <div id="error" class="hidden">Something went wrong!</div>
-        <ul id="todos">
-            {% for info in data %}
-            <li><input class="check-completed" type="checkbox" {% if info.completed %} checked {% endif %} /> {{ info.description }}</li>
-            {{ info.description }}
-            <button class="delete-button" data-id="{{ info.id }}">&cross;</button>
-        </li>
-            {% endfor %}
-        </ul>
+        <h3>TODO APP</h3> 
+        <div class="lists-wrapper">
+            <h4>Todo Lists</h4>
+            <form action="/lists/create" method="POST" id="list-form">
+                <label for="todolist">Create List:</label>
+                <input type="text" name="todolist" id="todolist-input" placeholder="A new List" data-id="{{ active_list.id }}"/>
+                <button type="submit">Create List</button>
+              </form>  
+            <ul id="lists">
+                {% for list in lists %}
+                <li>
+                <a href="/lists/{{ list.id }}">{{ list.name }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="todos-wrapper">
+            <h4>Todo Items</h4>
+            <form id="todo-form">
+                <input id="list_id" type="hidden" value="{{ active_list.id }}">
+                <label for="description">Create Task:</label>
+                <input id="description" type="text" name="description" placeholder="Task description"  />
+                <button type="submit">Create Task</button>
+            </form>
+            <div id="error" class="hidden">
+                An error occurred, please try again.
+            </div>
+            <h4>{{ active_list.name }}</h4>
+            <ul id="todos">
+                {% for todo in todos %}
+                <li>
+                    <input data-id="{{ todo.id }}" class="todo-check-completed" type="checkbox" name="complete" id="complete" {% if todo.completed %} checked {% endif %} /> 
+                    {{ todo.description }}
+                    <button class="delete-todo" data-id="{{ todo.id }}">&cross;</button>
+                </li>
+                {% endfor %}
+            </ul>
+
+        </div>
+
         <script>
-            const deleteBtns = document.querySelectorAll('.delete-button');
-            for (let i = 0; i < deleteBtns.length; i++) {
-                const btn = deleteBtns[i];
-                btn.onclick = function(e) {
-                    const todoId = e.target.dataset['id'];
-                    fetch('/todos/' + todoId, {
-                        method: 'DELETE'
-                    })
-                    .then(function() {
-                        const item = e.target.parentElement;
-                        item.remove();
-                    })
-                }
-            }
-            const checkboxes = document.querySelectorAll('.check-completed');
-            for (let i = 0; i < checkboxes.length; i++) {
-                const checkbox = checkboxes[i];
+            const todoCheckboxes = document.querySelectorAll('.todo-check-completed');
+            for (let i = 0; i < todoCheckboxes.length; i++) {
+                const checkbox = todoCheckboxes[i];
+
                 checkbox.onchange = function(e) {
                     const newCompleted = e.target.checked;
                     const todoId = e.target.dataset['id'];
+
                     fetch('/todos/' + todoId + '/set-completed', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -74,50 +91,54 @@
                         document.getElementById('error').className = 'hidden';
                     })
                     .catch(function() {
-                    document.getElementById('error').className = '';
+                        document.getElementById('error').className = '';
                     })
                 }
             }
-            const descInput = document.getElementById('description');
-            document.getElementById('form').onsubmit = function(e) {
+
+            deleteBtns = document.querySelectorAll(".delete-todo");
+
+            for (let i = 0; i < deleteBtns.length; i++) {
+                const deleteBtn = deleteBtns[i];
+                deleteBtn.onclick = function(e) {
+                    console.log("Delete event: ", e);
+                    const todoId = e.target.dataset.id;
+                    fetch('/todos/' + todoId, {
+                        method: 'DELETE'
+                    });
+                    
+                }
+            }
+            document.getElementById('todo-form').onsubmit = function(e) {
                 e.preventDefault();
-                const desc = descInput.value;
-                descInput.value = '';
+
                 fetch('/todos/create', {
                     method: 'POST',
                     body: JSON.stringify({
-                        'description': desc,
+                        'description': document.getElementById('description').value,
+                        'list_id': document.getElementById('list_id').value
                     }),
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 })
-                .then(response => response.json())
-                .then(jsonResponse => {
-                    const li = document.createElement('li');
-                    const checkbox = document.createElement('input');
-                    checkbox.className = 'check-completed';
-                    checkbox.type = 'checkbox';
-                    checkbox.setAttribute('data-id', jsonResponse.id);
-                    li.appendChild(checkbox);
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(jsonResponse) {
+                    const liItem = document.createElement('LI');
 
-                    const text = document.createTextNode(' ' + jsonResponse.description);
-                    li.appendChild(text);
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-button';
-                    deleteBtn.setAttribute('data-id', jsonResponse.id);
-                    deleteBtn.innerHTML = '&cross;';
-                    li.appendChild(deleteBtn);
-
-                    document.getElementById('todos').appendChild(li);
+                    liItem.innerHTML = jsonResponse['description'];
+                    document.getElementById('todos').appendChild(liItem);
                     document.getElementById('error').className = 'hidden';
+                    window.location.reload(true);
                 })
                 .catch(function() {
-                    console.error('Error occurred');
                     document.getElementById('error').className = '';
                 })
             }
+            
+
         </script>
     </body>
 </html>
